@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electricity Bill Splitter</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e2e6ea;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --accent: #4f6ef7;
+      --accent-hover: #3b5de7;
+      --danger: #e74c5e;
+      --danger-hover: #d43a4c;
+      --success: #22c55e;
+      --radius: 8px;
+      --weekend: #f8f0ff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .input-row-dates { margin-top: 1rem; }
+
+    .input-group {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      color: var(--muted);
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9375rem;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+    }
+
+    .date-info {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      display: none;
+    }
+
+    .date-info.visible { display: block; }
+
+    /* People section */
+    .person-entry {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .person-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .person-header input {
+      flex: 1;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+
+    .person-header input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.25rem;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .btn-remove:hover { background: rgba(231, 76, 94, 0.1); }
+
+    .calendar-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.375rem;
+    }
+
+    /* Calendar grid */
+    .calendar {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .calendar-month {
+      padding: 0.5rem;
+    }
+
+    .calendar-month-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      padding-bottom: 0.375rem;
+    }
+
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+
+    .calendar-weekday {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      padding: 2px 0;
+      text-transform: uppercase;
+    }
+
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      max-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: var(--bg);
+      font-size: 0.6875rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cal-day:hover { border-color: var(--accent); }
+
+    .cal-day.weekend { background: var(--weekend); }
+
+    .cal-day.absent {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+    .cal-day.outside {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .cal-day.not-in-range {
+      opacity: 0.25;
+      pointer-events: none;
+      cursor: default;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-calculate {
+      width: 100%;
+      justify-content: center;
+      padding: 0.75rem;
+      font-size: 1rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--border); }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Results */
+    #results {
+      display: none;
+    }
+
+    #results.visible { display: block; }
+
+    .results-card { margin-top: 1rem; }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9375rem;
+    }
+
+    .result-row:last-child { border-bottom: none; }
+
+    .result-row .name { font-weight: 500; }
+    .result-row .details { font-size: 0.8125rem; color: var(--muted); }
+
+    .result-row .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .result-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0 0;
+      margin-top: 0.25rem;
+      border-top: 2px solid var(--text);
+      font-weight: 600;
+    }
+
+    .error {
+      background: rgba(231, 76, 94, 0.08);
+      color: var(--danger);
+      padding: 0.625rem 0.875rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: none;
+    }
+
+    .error.visible { display: block; }
+
+    .absent-count {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.375rem;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 1rem 0.5rem; }
+      .input-row { flex-direction: column; gap: 0.75rem; }
+      .cal-day { font-size: 0.6rem; max-height: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Electricity Bill Splitter</h1>
+    <p class="subtitle">Split bills fairly based on who was present each day</p>
+
+    <div class="card">
+      <h2>Bill Details</h2>
+      <div class="input-row">
+        <div class="input-group">
+          <label for="totalCost">Total Cost</label>
+          <input type="number" id="totalCost" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="input-group">
+          <label for="fixedCost">Fixed Cost</label>
+          <input type="number" id="fixedCost" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+      </div>
+      <div class="input-row input-row-dates">
+        <div class="input-group">
+          <label for="dateFrom">From</label>
+          <input type="date" id="dateFrom">
+        </div>
+        <div class="input-group">
+          <label for="dateTo">To</label>
+          <input type="date" id="dateTo">
+        </div>
+      </div>
+      <div id="dateInfo" class="date-info"></div>
+    </div>
+
+    <div class="card">
+      <h2>People</h2>
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" onclick="addPerson()">+ Add Person</button>
+      </div>
+      <div id="error" class="error"></div>
+      <div id="people"></div>
+    </div>
+
+    <button type="button" class="btn btn-primary btn-calculate" onclick="calculate()">
+      Calculate Split
+    </button>
+
+    <div id="results" class="card results-card">
+      <h2>Results</h2>
+      <div id="resultsList"></div>
+    </div>
+  </div>
+
+  <script>
+    let personCount = 0;
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    // ---- Date helpers ----
+
+    function parseDate(str) {
+      if (!str) return null;
+      var parts = str.split('-');
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
+    function toDateStr(d) {
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+
+    function getDateRange() {
+      var from = parseDate(document.getElementById('dateFrom').value);
+      var to = parseDate(document.getElementById('dateTo').value);
+      if (!from || !to || from > to) return null;
+      return { from: from, to: to };
+    }
+
+    function getDatesInRange(from, to) {
+      var dates = [];
+      var d = new Date(from);
+      while (d <= to) {
+        dates.push(new Date(d));
+        d.setDate(d.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function getMonthsInRange(from, to) {
+      var months = [];
+      var d = new Date(from.getFullYear(), from.getMonth(), 1);
+      while (d <= to) {
+        months.push({ year: d.getFullYear(), month: d.getMonth() });
+        d.setMonth(d.getMonth() + 1);
+      }
+      return months;
+    }
+
+    function updateDateInfo() {
+      var range = getDateRange();
+      var el = document.getElementById('dateInfo');
+      if (!range) {
+        el.classList.remove('visible');
+        return;
+      }
+      var dates = getDatesInRange(range.from, range.to);
+      el.classList.add('visible');
+      el.textContent = dates.length + ' day' + (dates.length !== 1 ? 's' : '') + ' in billing period';
+      rebuildAllCalendars();
+    }
+
+    document.getElementById('dateFrom').addEventListener('change', updateDateInfo);
+    document.getElementById('dateTo').addEventListener('change', updateDateInfo);
+
+    // Set default dates: 1st to last day of current month
+    (function() {
+      var now = new Date();
+      var first = new Date(now.getFullYear(), now.getMonth(), 1);
+      var last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      document.getElementById('dateFrom').value = toDateStr(first);
+      document.getElementById('dateTo').value = toDateStr(last);
+      updateDateInfo();
+    })();
+
+    // ---- Calendar builder ----
+
+    function buildCalendar(personId) {
+      var container = document.getElementById('cal-' + personId);
+      if (!container) return;
+      container.innerHTML = '';
+
+      var range = getDateRange();
+      if (!range) {
+        container.innerHTML = '<div style="padding:0.5rem;color:var(--muted);font-size:0.8125rem;">Set bill dates above to see calendar</div>';
+        return;
+      }
+
+      var months = getMonthsInRange(range.from, range.to);
+
+      for (var m = 0; m < months.length; m++) {
+        var mo = months[m];
+        var monthDiv = document.createElement('div');
+        monthDiv.className = 'calendar-month';
+
+        // Month header
+        var header = document.createElement('div');
+        header.className = 'calendar-month-header';
+        header.textContent = MONTH_NAMES[mo.month] + ' ' + mo.year;
+        monthDiv.appendChild(header);
+
+        // Weekday headers
+        var weekdays = document.createElement('div');
+        weekdays.className = 'calendar-weekdays';
+        for (var w = 0; w < 7; w++) {
+          var wd = document.createElement('div');
+          wd.className = 'calendar-weekday';
+          wd.textContent = DAY_NAMES[w];
+          weekdays.appendChild(wd);
+        }
+        monthDiv.appendChild(weekdays);
+
+        // Days grid
+        var daysGrid = document.createElement('div');
+        daysGrid.className = 'calendar-days';
+
+        var firstDay = new Date(mo.year, mo.month, 1);
+        var lastDay = new Date(mo.year, mo.month + 1, 0);
+        var startDow = firstDay.getDay(); // 0=Sun
+
+        // Blank cells before first day
+        for (var b = 0; b < startDow; b++) {
+          var blank = document.createElement('div');
+          blank.className = 'cal-day outside';
+          daysGrid.appendChild(blank);
+        }
+
+        // Day cells
+        for (var d = 1; d <= lastDay.getDate(); d++) {
+          var date = new Date(mo.year, mo.month, d);
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cal-day';
+          btn.textContent = d;
+          btn.dataset.date = toDateStr(date);
+
+          var dow = date.getDay();
+          if (dow === 0 || dow === 6) {
+            btn.classList.add('weekend');
+          }
+
+          // Grey out dates outside the billing range
+          if (date < range.from || date > range.to) {
+            btn.classList.add('not-in-range');
+          } else {
+            btn.addEventListener('click', (function(pid) {
+              return function() {
+                this.classList.toggle('absent');
+                updateAbsentCount(pid);
+              };
+            })(personId));
+          }
+
+          daysGrid.appendChild(btn);
+        }
+
+        monthDiv.appendChild(daysGrid);
+        container.appendChild(monthDiv);
+      }
+
+      updateAbsentCount(personId);
+    }
+
+    // ---- People management ----
+
+    function addPerson() {
+      personCount++;
+      var id = personCount;
+
+      var div = document.createElement('div');
+      div.className = 'person-entry';
+      div.id = 'person-' + id;
+      div.innerHTML =
+        '<div class="person-header">' +
+          '<input type="text" placeholder="Name" data-person-name="' + id + '">' +
+          '<button class="btn-remove" onclick="removePerson(' + id + ')" title="Remove">&times;</button>' +
+        '</div>' +
+        '<div class="calendar-label">Click dates when absent:</div>' +
+        '<div class="calendar" id="cal-' + id + '"></div>' +
+        '<div class="absent-count" id="count-' + id + '">0 days absent</div>';
+
+      document.getElementById('people').appendChild(div);
+      buildCalendar(id);
+    }
+
+    function removePerson(id) {
+      var el = document.getElementById('person-' + id);
+      if (el) el.remove();
+    }
+
+    function updateAbsentCount(personId) {
+      var cal = document.getElementById('cal-' + personId);
+      var countEl = document.getElementById('count-' + personId);
+      if (!cal || !countEl) return;
+      var absent = cal.querySelectorAll('.cal-day.absent').length;
+      countEl.textContent = absent + ' day' + (absent !== 1 ? 's' : '') + ' absent';
+    }
+
+    function rebuildAllCalendars() {
+      var entries = document.querySelectorAll('.person-entry');
+      entries.forEach(function(entry) {
+        var id = entry.id.replace('person-', '');
+        buildCalendar(id);
+      });
+    }
+
+    // ---- Validation & Calculation ----
+
+    function showError(msg) {
+      var el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.add('visible');
+      document.getElementById('results').classList.remove('visible');
+    }
+
+    function clearError() {
+      document.getElementById('error').classList.remove('visible');
+    }
+
+    function calculate() {
+      clearError();
+
+      var totalCost = parseFloat(document.getElementById('totalCost').value);
+      var fixedCost = parseFloat(document.getElementById('fixedCost').value) || 0;
+      var range = getDateRange();
+
+      if (isNaN(totalCost) || totalCost < 0) { showError('Total cost is required and must be 0 or more.'); return; }
+      if (fixedCost < 0) { showError('Fixed cost cannot be negative.'); return; }
+      if (fixedCost > totalCost) { showError('Fixed cost cannot exceed total cost.'); return; }
+      if (!range) { showError('Set valid From and To dates (From must be before To).'); return; }
+
+      var allDates = getDatesInRange(range.from, range.to);
+      var totalDays = allDates.length;
+      if (totalDays <= 0) { showError('Date range must include at least 1 day.'); return; }
+
+      var entries = document.querySelectorAll('.person-entry');
+      if (entries.length === 0) { showError('Add at least one person.'); return; }
+
+      // Build a date string -> day index map
+      var dateToIndex = {};
+      for (var d = 0; d < allDates.length; d++) {
+        dateToIndex[toDateStr(allDates[d])] = d;
+      }
+
+      var persons = [];
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var nameInput = entry.querySelector('[data-person-name]');
+        var name = nameInput.value.trim() || ('Person ' + (i + 1));
+        var absentBtns = entry.querySelectorAll('.cal-day.absent');
+        var absentDays = [];
+        absentBtns.forEach(function(btn) {
+          var idx = dateToIndex[btn.dataset.date];
+          if (idx !== undefined) absentDays.push(idx);
+        });
+        persons.push({ name: name, absentDays: absentDays, absentCount: absentDays.length, charge: 0 });
+      }
+
+      // Split logic
+      var dailyVariableCost = (totalCost - fixedCost) / totalDays;
+
+      for (var p = 0; p < persons.length; p++) {
+        persons[p].charge = fixedCost / persons.length;
+      }
+
+      for (var day = 0; day < totalDays; day++) {
+        var present = persons.filter(function(p) { return !p.absentDays.includes(day); });
+        if (present.length === 0) {
+          var share = dailyVariableCost / persons.length;
+          for (var p = 0; p < persons.length; p++) {
+            persons[p].charge += share;
+          }
+        } else {
+          var share = dailyVariableCost / present.length;
+          for (var p = 0; p < present.length; p++) {
+            present[p].charge += share;
+          }
+        }
+      }
+
+      // Render results
+      var resultsList = document.getElementById('resultsList');
+      resultsList.innerHTML = '';
+      var total = 0;
+
+      for (var p = 0; p < persons.length; p++) {
+        total += persons[p].charge;
+        var daysPresent = totalDays - persons[p].absentCount;
+        var row = document.createElement('div');
+        row.className = 'result-row';
+        row.innerHTML =
+          '<div>' +
+            '<span class="name">' + escapeHtml(persons[p].name) + '</span>' +
+            '<div class="details">' + daysPresent + '/' + totalDays + ' days present</div>' +
+          '</div>' +
+          '<span class="amount">' + persons[p].charge.toFixed(2) + '</span>';
+        resultsList.appendChild(row);
+      }
+
+      var totalRow = document.createElement('div');
+      totalRow.className = 'result-total';
+      totalRow.innerHTML =
+        '<span>Total</span>' +
+        '<span>' + total.toFixed(2) + '</span>';
+      resultsList.appendChild(totalRow);
+
+      document.getElementById('results').classList.add('visible');
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    // Start with 2 people
+    addPerson();
+    addPerson();
+  </script>
+</body>
+</html>
