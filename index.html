@@ -237,6 +237,16 @@
       pointer-events: none;
     }
 
+    .cal-day.range-start {
+      box-shadow: 0 0 0 2px var(--accent);
+      border-color: var(--accent);
+      background: rgba(79, 110, 247, 0.15);
+    }
+
+    .cal-day.range-start.absent {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
     .cal-day.not-in-range {
       opacity: 0.25;
       pointer-events: none;
@@ -346,7 +356,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Electricity Bill Splitter</h1>
+    <h1> Bill Splitter</h1>
     <p class="subtitle">Split bills fairly based on who was present each day</p>
 
     <div class="card">
@@ -397,6 +407,11 @@
     let personCount = 0;
     const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    // Range selection state
+    var lastClickedDate = {};   // per personId: { date: string, absent: bool }
+    var longPressTimer = null;
+    var rangeAnchor = {};       // per personId: { date: string, absent: bool } or null
 
     // ---- Date helpers ----
 
@@ -465,6 +480,42 @@
       document.getElementById('dateTo').value = toDateStr(last);
       updateDateInfo();
     })();
+
+    // ---- Range selection helpers ----
+
+    function toggleRange(personId, dateStr1, dateStr2, setAbsent) {
+      var d1 = parseDate(dateStr1);
+      var d2 = parseDate(dateStr2);
+      if (!d1 || !d2) return;
+      var from = d1 < d2 ? d1 : d2;
+      var to = d1 < d2 ? d2 : d1;
+
+      var cal = document.getElementById('cal-' + personId);
+      if (!cal) return;
+      var btns = cal.querySelectorAll('.cal-day:not(.outside):not(.not-in-range)');
+      btns.forEach(function(btn) {
+        var bd = parseDate(btn.dataset.date);
+        if (bd && bd >= from && bd <= to) {
+          if (setAbsent) {
+            btn.classList.add('absent');
+          } else {
+            btn.classList.remove('absent');
+          }
+        }
+      });
+      updateAbsentCount(personId);
+    }
+
+    function clearRangeAnchor(personId) {
+      if (rangeAnchor[personId]) {
+        var cal = document.getElementById('cal-' + personId);
+        if (cal) {
+          var prev = cal.querySelector('.cal-day.range-start');
+          if (prev) prev.classList.remove('range-start');
+        }
+        rangeAnchor[personId] = null;
+      }
+    }
 
     // ---- Calendar builder ----
 
@@ -536,12 +587,75 @@
           if (date < range.from || date > range.to) {
             btn.classList.add('not-in-range');
           } else {
-            btn.addEventListener('click', (function(pid) {
-              return function() {
+            // Click handler: single toggle + Shift+Click range + mobile range completion
+            (function(pid, dateStr) {
+              btn.addEventListener('click', function(e) {
+                // Mobile range mode: complete the range
+                if (rangeAnchor[pid]) {
+                  var anchor = rangeAnchor[pid];
+                  if (anchor.date === dateStr) {
+                    // Tapped the anchor again — cancel range mode
+                    clearRangeAnchor(pid);
+                    return;
+                  }
+                  toggleRange(pid, anchor.date, dateStr, anchor.absent);
+                  clearRangeAnchor(pid);
+                  return;
+                }
+
+                // Desktop Shift+Click range
+                if (e.shiftKey && lastClickedDate[pid]) {
+                  toggleRange(pid, lastClickedDate[pid].date, dateStr, lastClickedDate[pid].absent);
+                  lastClickedDate[pid] = { date: dateStr, absent: lastClickedDate[pid].absent };
+                  return;
+                }
+
+                // Normal single click
                 this.classList.toggle('absent');
+                var nowAbsent = this.classList.contains('absent');
+                lastClickedDate[pid] = { date: dateStr, absent: nowAbsent };
                 updateAbsentCount(pid);
-              };
-            })(personId));
+              });
+
+              // Long-press for mobile: sets range anchor
+              var lpTimer = null;
+              var longPressTriggered = false;
+              btn.addEventListener('touchstart', function(e) {
+                var self = this;
+                longPressTriggered = false;
+                lpTimer = setTimeout(function() {
+                  lpTimer = null;
+                  longPressTriggered = true;
+                  // Enter range mode
+                  clearRangeAnchor(pid);
+                  // Toggle this date first so user sees the intended state
+                  self.classList.toggle('absent');
+                  var nowAbsent = self.classList.contains('absent');
+                  updateAbsentCount(pid);
+                  self.classList.add('range-start');
+                  rangeAnchor[pid] = { date: dateStr, absent: nowAbsent };
+                }, 500);
+              }, { passive: true });
+
+              btn.addEventListener('touchend', function(e) {
+                if (lpTimer) {
+                  clearTimeout(lpTimer);
+                  lpTimer = null;
+                }
+                if (longPressTriggered) {
+                  // Prevent the click event that follows touchend after a long-press
+                  e.preventDefault();
+                  longPressTriggered = false;
+                }
+              });
+
+              btn.addEventListener('touchmove', function() {
+                if (lpTimer) {
+                  clearTimeout(lpTimer);
+                  lpTimer = null;
+                }
+              });
+            })(personId, toDateStr(date));
           }
 
           daysGrid.appendChild(btn);
@@ -568,7 +682,7 @@
           '<input type="text" placeholder="Name" data-person-name="' + id + '">' +
           '<button class="btn-remove" onclick="removePerson(' + id + ')" title="Remove">&times;</button>' +
         '</div>' +
-        '<div class="calendar-label">Click dates when absent:</div>' +
+        '<div class="calendar-label">Click dates when absent (Shift+click or long-press for range):</div>' +
         '<div class="calendar" id="cal-' + id + '"></div>' +
         '<div class="absent-count" id="count-' + id + '">0 days absent</div>';
 
@@ -590,6 +704,8 @@
     }
 
     function rebuildAllCalendars() {
+      lastClickedDate = {};
+      rangeAnchor = {};
       var entries = document.querySelectorAll('.person-entry');
       entries.forEach(function(entry) {
         var id = entry.id.replace('person-', '');
